@@ -23,12 +23,16 @@ final class InfilUITests: XCTestCase {
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testMainScreenButtons() throws {
         let app = XCUIApplication()
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+        XCTAssertTrue(app.buttons["Plan Run"].exists)
+        XCTAssertTrue(app.buttons["View Planned Runs"].exists)
+        
+        let navBar = app.navigationBars["Infil"]
+        XCTAssertTrue(navBar.buttons["View Planned Runs List"].exists)
+        XCTAssertTrue(navBar.buttons["View Profile"].exists)
     }
 
     @MainActor

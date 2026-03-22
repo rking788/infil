@@ -9,58 +9,116 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @State private var showingPlanRunModal = false
+    @State private var runPlans: [RunPlan] = RunPlan.allMocks
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
+        NavigationStack {
+            ZStack {
+                if runPlans.isEmpty {
+                    emptyStateView
+                } else {
+                    cardStackView
                 }
-                .onDelete(perform: deleteItems)
             }
-#if os(macOS)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-#endif
+            .navigationTitle("Infil")
             .toolbar {
-#if os(iOS)
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
+                ToolbarItem(placement: .navigationBarLeading) {
+                    NavigationLink(destination: Text("Planned Runs View")) {
+                        Image(systemName: "list.bullet.rectangle.portrait")
+                            .imageScale(.large)
+                            .accessibilityLabel("View Planned Runs List")
+                    }
                 }
-#endif
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: Text("Profile View")) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .imageScale(.large)
+                            .accessibilityLabel("View Profile")
                     }
                 }
             }
-        } detail: {
-            Text("Select an item")
-        }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+            .sheet(isPresented: $showingPlanRunModal) {
+                Text("Create a Run Plan View")
             }
+        }
+    }
+
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Spacer()
+
+            Button(action: {
+                showingPlanRunModal = true
+            }) {
+                Text("Plan Run")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(.marathonYellow)
+            .foregroundColor(.black)
+
+            NavigationLink(destination: Text("Planned Runs View")) {
+                Text("View Planned Runs")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+
+            Spacer()
+        }
+        .padding(.horizontal, 24)
+    }
+
+    private var cardStackView: some View {
+        VStack {
+            ZStack {
+                let displayPlans = Array(runPlans.prefix(3))
+                
+                ForEach(Array(displayPlans.enumerated().reversed()), id: \.element.id) { index, plan in
+                    RunPlanCardView(plan: plan) { outcome in
+                        withAnimation {
+                            runPlans.removeAll { $0.id == plan.id }
+                        }
+                    }
+                    .offset(y: CGFloat(index) * 12)
+                    .scaleEffect(1.0 - CGFloat(index) * 0.03)
+                    .zIndex(Double(displayPlans.count - index))
+                }
+            }
+            .padding()
+            .padding(.bottom, 20)
+
+            HStack(spacing: 30) {
+                Button(action: {
+                    showingPlanRunModal = true
+                }) {
+                    Label("Plan Run", systemImage: "plus")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+
+                Button(action: {
+                    // Refresh or add back for testing
+                    withAnimation {
+                        runPlans = RunPlan.allMocks
+                    }
+                }) {
+                    Label("Reset", systemImage: "arrow.counterclockwise")
+                }
+                .buttonStyle(.borderless)
+            }
+            .padding(.bottom)
         }
     }
 }
 
+extension Color {
+    static let marathonYellow = Color(red: 0.95, green: 0.98, blue: 0.1) // Bright neon yellow
+}
+
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }
